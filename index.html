@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SNAKE (1980 Retro Edition)</title>
     <style>
         body {
@@ -12,39 +13,59 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             user-select: none;
+            touch-action: manipulation;
         }
 
-        h1 {
-            margin: 0 0 10px 0;
-            letter-spacing: 4px;
-            text-shadow: 0 0 8px #00FF00;
-        }
+        h1 { margin: 5px 0; letter-spacing: 4px; text-shadow: 0 0 8px #00FF00; }
 
         #game-board {
             border: 4px solid #00FF00;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
             background-color: #000000;
+            max-width: 90vw;
+            max-height: 90vw;
         }
 
         .ui-container {
-            width: 400px;
+            width: 300px;
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
             font-weight: bold;
-            font-size: 18px;
-            text-shadow: 0 0 5px #00FF00;
+            font-size: 16px;
         }
 
-        .instructions {
+        /* D-Pad Tactile pour iOS */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(3, 60px);
+            gap: 5px;
             margin-top: 15px;
-            font-size: 14px;
-            color: #00AA00;
-            text-align: center;
         }
+
+        .btn {
+            background: #000;
+            border: 2px solid #00FF00;
+            color: #00FF00;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+        }
+
+        .btn:active { background: #00FF00; color: #000; }
+        .up { grid-column: 2; grid-row: 1; }
+        .left { grid-column: 1; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 3; }
+        .restart { grid-column: 2; grid-row: 2; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -56,11 +77,14 @@
         <div>RECORD: <span id="high-score">0000</span></div>
     </div>
 
-    <canvas id="game-board" width="400" height="400"></canvas>
+    <canvas id="game-board" width="300" height="300"></canvas>
 
-    <div class="instructions">
-        [Flèches directionnelles] pour tourner<br>
-        [Espace] pour Recommencer
+    <div class="controls">
+        <div class="btn up" onclick="setDir(0, -15)">▲</div>
+        <div class="btn left" onclick="setDir(-15, 0)">◄</div>
+        <div class="btn restart" onclick="initGame()">START</div>
+        <div class="btn right" onclick="setDir(15, 0)">►</div>
+        <div class="btn down" onclick="setDir(0, 15)">▼</div>
     </div>
 
     <script>
@@ -69,182 +93,93 @@
         const scoreEl = document.getElementById("score");
         const highScoreEl = document.getElementById("high-score");
 
-        // Configuration de la grille
-        const GRID_SIZE = 20;
-        const TILE_COUNT = canvas.width / GRID_SIZE; // 20x20 cases
+        const GRID_SIZE = 15;
+        const TILE_COUNT = canvas.width / GRID_SIZE;
 
-        // Variables de jeu
         let snake = [];
-        let dx = GRID_SIZE; // Vitesse X
-        let dy = 0;         // Vitesse Y
-        let foodX = 0;
-        let foodY = 0;
-        let score = 0;
-        let highScore = 0;
-        let gameOver = false;
-        let gameInterval = null;
-        let changingDirection = false; // Empêche le demi-tour instantané
+        let dx = GRID_SIZE, dy = 0;
+        let foodX = 0, foodY = 0;
+        let score = 0, highScore = 0;
+        let gameOver = false, gameInterval = null;
 
         function initGame() {
             snake = [
-                { x: 10 * GRID_SIZE, y: 10 * GRID_SIZE },
-                { x: 9 * GRID_SIZE,  y: 10 * GRID_SIZE },
-                { x: 8 * GRID_SIZE,  y: 10 * GRID_SIZE }
+                { x: 5 * GRID_SIZE, y: 5 * GRID_SIZE },
+                { x: 4 * GRID_SIZE, y: 5 * GRID_SIZE }
             ];
-            dx = GRID_SIZE;
-            dy = 0;
-            score = 0;
+            dx = GRID_SIZE; dy = 0; score = 0;
             gameOver = false;
             updateScore();
             generateFood();
-            
             if (gameInterval) clearInterval(gameInterval);
-            // Vitesse fixe rétro : 100 ms par frame (~10 images par seconde)
-            gameInterval = setInterval(gameLoop, 100); 
+            gameInterval = setInterval(gameLoop, 120);
         }
 
         function gameLoop() {
             if (gameOver) return;
-
-            changingDirection = false;
             clearCanvas();
             moveSnake();
             checkCollision();
-            
-            if (!gameOver) {
-                drawFood();
-                drawSnake();
-            } else {
-                drawGameOver();
-            }
+            if (!gameOver) { drawFood(); drawSnake(); } 
+            else { drawGameOver(); }
         }
 
-        function clearCanvas() {
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        function clearCanvas() { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
 
         function drawSnake() {
             ctx.fillStyle = "#00FF00";
-            snake.forEach((part, index) => {
-                // Style rétro : petits espaces de 1px entre les blocs
-                ctx.fillRect(part.x + 1, part.y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
-            });
+            snake.forEach(part => ctx.fillRect(part.x + 1, part.y + 1, GRID_SIZE - 2, GRID_SIZE - 2));
         }
 
         function moveSnake() {
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             snake.unshift(head);
-
-            // Mange la nourriture
             if (head.x === foodX && head.y === foodY) {
-                score += 10;
-                updateScore();
-                generateFood();
-            } else {
-                snake.pop(); // Retire la queue
-            }
+                score += 10; updateScore(); generateFood();
+            } else { snake.pop(); }
         }
 
         function generateFood() {
             foodX = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
             foodY = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
-
-            // Vérifie que la nourriture n'apparaît pas sur le serpent
-            snake.forEach(part => {
-                if (part.x === foodX && part.y === foodY) {
-                    generateFood();
-                }
-            });
         }
 
         function drawFood() {
             ctx.fillStyle = "#00FF00";
-            // Un bloc clignotant ou fixe pour la nourriture
-            ctx.fillRect(foodX + 3, foodY + 3, GRID_SIZE - 6, GRID_SIZE - 6);
+            ctx.fillRect(foodX + 2, foodY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
         }
 
         function checkCollision() {
             const head = snake[0];
-
-            // Collision avec les murs
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
-                endGame();
-            }
-
-            // Collision avec soi-même
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) endGame();
             for (let i = 1; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) {
-                    endGame();
-                }
+                if (head.x === snake[i].x && head.y === snake[i].y) endGame();
             }
         }
 
         function endGame() {
             gameOver = true;
             clearInterval(gameInterval);
-            if (score > highScore) {
-                highScore = score;
-                highScoreEl.textContent = String(highScore).padStart(4, '0');
-            }
+            if (score > highScore) { highScore = score; highScoreEl.textContent = String(highScore).padStart(4, '0'); }
             drawGameOver();
         }
 
         function drawGameOver() {
             clearCanvas();
             ctx.fillStyle = "#00FF00";
-            ctx.font = "24px 'Courier New', monospace";
+            ctx.font = "18px 'Courier New', monospace";
             ctx.textAlign = "center";
-            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
-            
-            ctx.font = "14px 'Courier New', monospace";
-            ctx.fillText("Appuyez sur ESPACE", canvas.width / 2, canvas.height / 2 + 20);
+            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
         }
 
-        function updateScore() {
-            scoreEl.textContent = String(score).padStart(4, '0');
+        function updateScore() { scoreEl.textContent = String(score).padStart(4, '0'); }
+
+        function setDir(newDx, newDy) {
+            if (gameOver) { initGame(); return; }
+            if (newDx === -dx || newDy === -dy) return; // Empêche le demi-tour
+            dx = newDx; dy = newDy;
         }
 
-        // Gestion des contrôles claviers
-        window.addEventListener("keydown", e => {
-            if (e.code === "Space") {
-                if (gameOver || !gameInterval) {
-                    initGame();
-                }
-                return;
-            }
-
-            if (changingDirection) return;
-
-            const keyPressed = e.key;
-            const goingUp = dy === -GRID_SIZE;
-            const goingDown = dy === GRID_SIZE;
-            const goingRight = dx === GRID_SIZE;
-            const goingLeft = dx === -GRID_SIZE;
-
-            if ((keyPressed === "ArrowLeft" || keyPressed === "q" || keyPressed === "Q") && !goingRight) {
-                dx = -GRID_SIZE;
-                dy = 0;
-                changingDirection = true;
-            }
-            if ((keyPressed === "ArrowUp" || keyPressed === "z" || keyPressed === "Z") && !goingDown) {
-                dx = 0;
-                dy = -GRID_SIZE;
-                changingDirection = true;
-            }
-            if ((keyPressed === "ArrowRight" || keyPressed === "d" || keyPressed === "D") && !goingLeft) {
-                dx = GRID_SIZE;
-                dy = 0;
-                changingDirection = true;
-            }
-            if ((keyPressed === "ArrowDown" || keyPressed === "s" || keyPressed === "S") && !goingUp) {
-                dx = 0;
-                dy = GRID_SIZE;
-                changingDirection = true;
-            }
-        });
-
-        // Démarrage initial
         initGame();
     </script>
 </body>
