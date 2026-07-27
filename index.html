@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE (1980 Retro Edition)</title>
+    <title>SNAKE (1980 HD Ultra-Res Edition)</title>
     <style>
         body {
             background-color: #050505;
@@ -19,31 +19,41 @@
             touch-action: manipulation;
         }
 
-        h1 { margin: 5px 0; letter-spacing: 4px; text-shadow: 0 0 8px #00FF00; }
+        h1 { 
+            margin: 5px 0; 
+            letter-spacing: 6px; 
+            text-shadow: 0 0 12px #00FF00; 
+            font-size: 28px;
+        }
 
         #game-board {
             border: 4px solid #00FF00;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
             background-color: #000000;
-            max-width: 90vw;
-            max-height: 90vw;
+            /* Redimensionnement CSS pour s'adapter à l'écran sans perdre la résolution native de 1600px */
+            max-width: 85vw;
+            max-height: 60vh;
+            width: 500px;
+            height: 500px;
         }
 
         .ui-container {
-            width: 300px;
+            width: 85vw;
+            max-width: 500px;
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 20px;
+            text-shadow: 0 0 8px #00FF00;
         }
 
         /* D-Pad Tactile pour iOS */
         .controls {
             display: grid;
-            grid-template-columns: repeat(3, 60px);
-            grid-template-rows: repeat(3, 60px);
-            gap: 5px;
+            grid-template-columns: repeat(3, 65px);
+            grid-template-rows: repeat(3, 65px);
+            gap: 8px;
             margin-top: 15px;
         }
 
@@ -51,13 +61,14 @@
             background: #000;
             border: 2px solid #00FF00;
             color: #00FF00;
-            font-size: 20px;
+            font-size: 22px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
-            box-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+            border-radius: 10px;
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+            cursor: pointer;
         }
 
         .btn:active { background: #00FF00; color: #000; }
@@ -65,26 +76,38 @@
         .left { grid-column: 1; grid-row: 2; }
         .right { grid-column: 3; grid-row: 2; }
         .down { grid-column: 2; grid-row: 3; }
-        .restart { grid-column: 2; grid-row: 2; font-size: 12px; }
+        .restart { grid-column: 2; grid-row: 2; font-size: 11px; text-align: center; }
+
+        .instructions {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #00AA00;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
 
-    <h1>SNAKE</h1>
+    <h1>SNAKE 1600px</h1>
     
     <div class="ui-container">
         <div>SCORE: <span id="score">0000</span></div>
         <div>RECORD: <span id="high-score">0000</span></div>
     </div>
 
-    <canvas id="game-board" width="300" height="300"></canvas>
+    <!-- Canvas en Résolution 1600 x 1600 (4x la résolution d'origine) -->
+    <canvas id="game-board" width="1600" height="1600"></canvas>
 
     <div class="controls">
-        <div class="btn up" onclick="setDir(0, -15)">▲</div>
-        <div class="btn left" onclick="setDir(-15, 0)">◄</div>
+        <div class="btn up" onclick="handleInput('Up')">▲</div>
+        <div class="btn left" onclick="handleInput('Left')">◄</div>
         <div class="btn restart" onclick="initGame()">START</div>
-        <div class="btn right" onclick="setDir(15, 0)">►</div>
-        <div class="btn down" onclick="setDir(0, 15)">▼</div>
+        <div class="btn right" onclick="handleInput('Right')">►</div>
+        <div class="btn down" onclick="handleInput('Down')">▼</div>
+    </div>
+
+    <div class="instructions">
+        [Flèches] ou [Tactile] pour tourner | [Espace] pour Recommencer
     </div>
 
     <script>
@@ -93,93 +116,163 @@
         const scoreEl = document.getElementById("score");
         const highScoreEl = document.getElementById("high-score");
 
-        const GRID_SIZE = 15;
-        const TILE_COUNT = canvas.width / GRID_SIZE;
+        // Taille de la grille multipliée par 4 (80px par case sur une grille 1600x1600 -> 20x20 cases)
+        const GRID_SIZE = 80;
+        const TILE_COUNT = canvas.width / GRID_SIZE; // 20x20 cases
 
         let snake = [];
         let dx = GRID_SIZE, dy = 0;
         let foodX = 0, foodY = 0;
         let score = 0, highScore = 0;
         let gameOver = false, gameInterval = null;
+        let changingDirection = false;
 
         function initGame() {
             snake = [
-                { x: 5 * GRID_SIZE, y: 5 * GRID_SIZE },
-                { x: 4 * GRID_SIZE, y: 5 * GRID_SIZE }
+                { x: 10 * GRID_SIZE, y: 10 * GRID_SIZE },
+                { x: 9 * GRID_SIZE,  y: 10 * GRID_SIZE },
+                { x: 8 * GRID_SIZE,  y: 10 * GRID_SIZE }
             ];
-            dx = GRID_SIZE; dy = 0; score = 0;
+            dx = GRID_SIZE;
+            dy = 0;
+            score = 0;
             gameOver = false;
             updateScore();
             generateFood();
+            
             if (gameInterval) clearInterval(gameInterval);
-            gameInterval = setInterval(gameLoop, 120);
+            gameInterval = setInterval(gameLoop, 90);
         }
 
         function gameLoop() {
             if (gameOver) return;
+
+            changingDirection = false;
             clearCanvas();
             moveSnake();
             checkCollision();
-            if (!gameOver) { drawFood(); drawSnake(); } 
-            else { drawGameOver(); }
+            
+            if (!gameOver) {
+                drawFood();
+                drawSnake();
+            } else {
+                drawGameOver();
+            }
         }
 
-        function clearCanvas() { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        function clearCanvas() {
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
 
         function drawSnake() {
             ctx.fillStyle = "#00FF00";
-            snake.forEach(part => ctx.fillRect(part.x + 1, part.y + 1, GRID_SIZE - 2, GRID_SIZE - 2));
+            snake.forEach(part => {
+                // Espace proportionnel de 4px entre les blocs HD
+                ctx.fillRect(part.x + 4, part.y + 4, GRID_SIZE - 8, GRID_SIZE - 8);
+            });
         }
 
         function moveSnake() {
             const head = { x: snake[0].x + dx, y: snake[0].y + dy };
             snake.unshift(head);
+
             if (head.x === foodX && head.y === foodY) {
-                score += 10; updateScore(); generateFood();
-            } else { snake.pop(); }
+                score += 10;
+                updateScore();
+                generateFood();
+            } else {
+                snake.pop();
+            }
         }
 
         function generateFood() {
             foodX = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
             foodY = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
+
+            snake.forEach(part => {
+                if (part.x === foodX && part.y === foodY) {
+                    generateFood();
+                }
+            });
         }
 
         function drawFood() {
             ctx.fillStyle = "#00FF00";
-            ctx.fillRect(foodX + 2, foodY + 2, GRID_SIZE - 4, GRID_SIZE - 4);
+            ctx.fillRect(foodX + 12, foodY + 12, GRID_SIZE - 24, GRID_SIZE - 24);
         }
 
         function checkCollision() {
             const head = snake[0];
-            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) endGame();
+
+            if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+                endGame();
+            }
+
             for (let i = 1; i < snake.length; i++) {
-                if (head.x === snake[i].x && head.y === snake[i].y) endGame();
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    endGame();
+                }
             }
         }
 
         function endGame() {
             gameOver = true;
             clearInterval(gameInterval);
-            if (score > highScore) { highScore = score; highScoreEl.textContent = String(highScore).padStart(4, '0'); }
+            if (score > highScore) {
+                highScore = score;
+                highScoreEl.textContent = String(highScore).padStart(4, '0');
+            }
             drawGameOver();
         }
 
         function drawGameOver() {
             clearCanvas();
             ctx.fillStyle = "#00FF00";
-            ctx.font = "18px 'Courier New', monospace";
+            ctx.font = "bold 90px 'Courier New', monospace";
             ctx.textAlign = "center";
-            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+            ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+            
+            ctx.font = "50px 'Courier New', monospace";
+            ctx.fillText("Appuyez sur ESPACE ou START", canvas.width / 2, canvas.height / 2 + 80);
         }
 
-        function updateScore() { scoreEl.textContent = String(score).padStart(4, '0'); }
-
-        function setDir(newDx, newDy) {
-            if (gameOver) { initGame(); return; }
-            if (newDx === -dx || newDy === -dy) return; // Empêche le demi-tour
-            dx = newDx; dy = newDy;
+        function updateScore() {
+            scoreEl.textContent = String(score).padStart(4, '0');
         }
 
+        function handleInput(dir) {
+            if (gameOver) {
+                initGame();
+                return;
+            }
+            if (changingDirection) return;
+
+            const goingUp = dy === -GRID_SIZE;
+            const goingDown = dy === GRID_SIZE;
+            const goingRight = dx === GRID_SIZE;
+            const goingLeft = dx === -GRID_SIZE;
+
+            if (dir === "Left" && !goingRight) { dx = -GRID_SIZE; dy = 0; changingDirection = true; }
+            if (dir === "Up" && !goingDown) { dx = 0; dy = -GRID_SIZE; changingDirection = true; }
+            if (dir === "Right" && !goingLeft) { dx = GRID_SIZE; dy = 0; changingDirection = true; }
+            if (dir === "Down" && !goingUp) { dx = 0; dy = GRID_SIZE; changingDirection = true; }
+        }
+
+        // Écoute des touches du clavier
+        window.addEventListener("keydown", e => {
+            if (e.code === "Space") {
+                if (gameOver || !gameInterval) initGame();
+                return;
+            }
+
+            if (e.key === "ArrowLeft" || e.key === "q" || e.key === "Q") handleInput("Left");
+            if (e.key === "ArrowUp" || e.key === "z" || e.key === "Z") handleInput("Up");
+            if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") handleInput("Right");
+            if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") handleInput("Down");
+        });
+
+        // Lancement du jeu
         initGame();
     </script>
 </body>
