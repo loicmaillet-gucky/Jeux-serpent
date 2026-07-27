@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE (1980 HD Ultra-Res Edition)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNAKE (Mac Edition)</title>
     <style>
         body {
             background-color: #050505;
@@ -16,98 +16,67 @@
             min-height: 100vh;
             margin: 0;
             user-select: none;
-            touch-action: manipulation;
         }
 
         h1 { 
-            margin: 5px 0; 
+            margin: 0 0 10px 0; 
             letter-spacing: 6px; 
             text-shadow: 0 0 12px #00FF00; 
-            font-size: 28px;
+            font-size: 32px;
         }
 
         #game-board {
             border: 4px solid #00FF00;
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
             background-color: #000000;
-            /* Redimensionnement CSS pour s'adapter à l'écran sans perdre la résolution native de 1600px */
-            max-width: 85vw;
-            max-height: 60vh;
+            max-width: 90vw;
+            max-height: 70vh;
             width: 500px;
             height: 500px;
         }
 
         .ui-container {
-            width: 85vw;
-            max-width: 500px;
+            width: 500px;
+            max-width: 90vw;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-weight: bold;
             font-size: 20px;
             text-shadow: 0 0 8px #00FF00;
         }
 
-        /* D-Pad Tactile pour iOS */
-        .controls {
-            display: grid;
-            grid-template-columns: repeat(3, 65px);
-            grid-template-rows: repeat(3, 65px);
-            gap: 8px;
-            margin-top: 15px;
-        }
-
-        .btn {
-            background: #000;
-            border: 2px solid #00FF00;
-            color: #00FF00;
-            font-size: 22px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 10px;
-            box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
-            cursor: pointer;
-        }
-
-        .btn:active { background: #00FF00; color: #000; }
-        .up { grid-column: 2; grid-row: 1; }
-        .left { grid-column: 1; grid-row: 2; }
-        .right { grid-column: 3; grid-row: 2; }
-        .down { grid-column: 2; grid-row: 3; }
-        .restart { grid-column: 2; grid-row: 2; font-size: 11px; text-align: center; }
-
         .instructions {
-            margin-top: 10px;
-            font-size: 13px;
+            margin-top: 15px;
+            font-size: 14px;
             color: #00AA00;
             text-align: center;
+            line-height: 1.5;
+        }
+
+        .key {
+            border: 1px solid #00FF00;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #00FF00;
         }
     </style>
 </head>
 <body>
 
-    <h1>SNAKE 1600px</h1>
+    <h1>SNAKE</h1>
     
     <div class="ui-container">
         <div>SCORE: <span id="score">0000</span></div>
         <div>RECORD: <span id="high-score">0000</span></div>
     </div>
 
-    <!-- Canvas en Résolution 1600 x 1600 (4x la résolution d'origine) -->
+    <!-- Canvas Ultra HD 1600x1600 -->
     <canvas id="game-board" width="1600" height="1600"></canvas>
 
-    <div class="controls">
-        <div class="btn up" onclick="handleInput('Up')">▲</div>
-        <div class="btn left" onclick="handleInput('Left')">◄</div>
-        <div class="btn restart" onclick="initGame()">START</div>
-        <div class="btn right" onclick="handleInput('Right')">►</div>
-        <div class="btn down" onclick="handleInput('Down')">▼</div>
-    </div>
-
     <div class="instructions">
-        [Flèches] ou [Tactile] pour tourner | [Espace] pour Recommencer
+        Utilisez les <span class="key">Flèches</span> du Mac pour diriger<br>
+        <span class="key">Espace</span> pour Démarrer / Recommencer
     </div>
 
     <script>
@@ -116,9 +85,8 @@
         const scoreEl = document.getElementById("score");
         const highScoreEl = document.getElementById("high-score");
 
-        // Taille de la grille multipliée par 4 (80px par case sur une grille 1600x1600 -> 20x20 cases)
         const GRID_SIZE = 80;
-        const TILE_COUNT = canvas.width / GRID_SIZE; // 20x20 cases
+        const TILE_COUNT = canvas.width / GRID_SIZE; // Grille 20x20
 
         let snake = [];
         let dx = GRID_SIZE, dy = 0;
@@ -168,7 +136,6 @@
         function drawSnake() {
             ctx.fillStyle = "#00FF00";
             snake.forEach(part => {
-                // Espace proportionnel de 4px entre les blocs HD
                 ctx.fillRect(part.x + 4, part.y + 4, GRID_SIZE - 8, GRID_SIZE - 8);
             });
         }
@@ -234,45 +201,50 @@
             ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
             
             ctx.font = "50px 'Courier New', monospace";
-            ctx.fillText("Appuyez sur ESPACE ou START", canvas.width / 2, canvas.height / 2 + 80);
+            ctx.fillText("Appuyez sur ESPACE", canvas.width / 2, canvas.height / 2 + 80);
         }
 
         function updateScore() {
             scoreEl.textContent = String(score).padStart(4, '0');
         }
 
-        function handleInput(dir) {
-            if (gameOver) {
-                initGame();
+        /* --- GESTION EXCLUSIVE DES TOUCHES MAC --- */
+        window.addEventListener("keydown", e => {
+            // Relance avec ESPACE
+            if (e.code === "Space") {
+                e.preventDefault();
+                if (gameOver || !gameInterval) initGame();
                 return;
             }
-            if (changingDirection) return;
+
+            // Empêche le défilement de la page Safari/Chrome avec les flèches
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            if (changingDirection || gameOver) return;
 
             const goingUp = dy === -GRID_SIZE;
             const goingDown = dy === GRID_SIZE;
             const goingRight = dx === GRID_SIZE;
             const goingLeft = dx === -GRID_SIZE;
 
-            if (dir === "Left" && !goingRight) { dx = -GRID_SIZE; dy = 0; changingDirection = true; }
-            if (dir === "Up" && !goingDown) { dx = 0; dy = -GRID_SIZE; changingDirection = true; }
-            if (dir === "Right" && !goingLeft) { dx = GRID_SIZE; dy = 0; changingDirection = true; }
-            if (dir === "Down" && !goingUp) { dx = 0; dy = GRID_SIZE; changingDirection = true; }
-        }
-
-        // Écoute des touches du clavier
-        window.addEventListener("keydown", e => {
-            if (e.code === "Space") {
-                if (gameOver || !gameInterval) initGame();
-                return;
+            // Contrôle strict par flèches directionnelles Mac
+            if (e.code === "ArrowLeft" && !goingRight) {
+                dx = -GRID_SIZE; dy = 0; changingDirection = true;
             }
-
-            if (e.key === "ArrowLeft" || e.key === "q" || e.key === "Q") handleInput("Left");
-            if (e.key === "ArrowUp" || e.key === "z" || e.key === "Z") handleInput("Up");
-            if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") handleInput("Right");
-            if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") handleInput("Down");
+            if (e.code === "ArrowUp" && !goingDown) {
+                dx = 0; dy = -GRID_SIZE; changingDirection = true;
+            }
+            if (e.code === "ArrowRight" && !goingLeft) {
+                dx = GRID_SIZE; dy = 0; changingDirection = true;
+            }
+            if (e.code === "ArrowDown" && !goingUp) {
+                dx = 0; dy = GRID_SIZE; changingDirection = true;
+            }
         });
 
-        // Lancement du jeu
+        // Démarrage du jeu
         initGame();
     </script>
 </body>
