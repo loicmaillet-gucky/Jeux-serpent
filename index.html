@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE (iOS Pure Touch)</title>
+    <title>SNAKE (iOS Pure Touch + Keyboard)</title>
     <style>
         * {
             box-sizing: border-box;
@@ -78,8 +78,8 @@
     <canvas id="game-board" width="1600" height="1600"></canvas>
 
     <div class="instructions">
-        Glissez le doigt pour vous déplacer<br>
-        Touchez l'écran pour rejouer
+        iOS : Glissez le doigt | Mac/PC : [Flèches]<br>
+        [Espace] ou Toucher pour rejouer
     </div>
 
     <script>
@@ -202,7 +202,7 @@
             ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
             
             ctx.font = "45px 'Courier New', monospace";
-            ctx.fillText("Touchez pour rejouer", canvas.width / 2, canvas.height / 2 + 80);
+            ctx.fillText("Touchez ou ESPACE", canvas.width / 2, canvas.height / 2 + 80);
         }
 
         function updateScore() {
@@ -227,7 +227,25 @@
             if (dir === "Down" && !goingUp) { dx = 0; dy = GRID_SIZE; changingDirection = true; }
         }
 
-        /* --- DETECTEUR DE SWIPE OPTIMISÉ iOS --- */
+        /* --- CONTRÔLES CLAVIER (Mac & PC) --- */
+        window.addEventListener("keydown", function(e) {
+            if (e.code === "Space") {
+                e.preventDefault();
+                if (gameOver || !gameInterval) initGame();
+                return;
+            }
+
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+                e.preventDefault(); // Empêche le défilement de la page
+            }
+
+            if (e.code === "ArrowLeft") handleInput("Left");
+            if (e.code === "ArrowUp") handleInput("Up");
+            if (e.code === "ArrowRight") handleInput("Right");
+            if (e.code === "ArrowDown") handleInput("Down");
+        });
+
+        /* --- DÉTECTEUR DE SWIPE OPTIMISÉ iOS (NON MODIFIÉ) --- */
         let touchStartX = 0;
         let touchStartY = 0;
 
@@ -241,7 +259,6 @@
         }, { passive: false });
 
         window.addEventListener("touchmove", function(e) {
-            // Bloque le défilement de la page pendant le geste
             e.preventDefault();
         }, { passive: false });
 
@@ -254,7 +271,6 @@
             let diffX = touchEndX - touchStartX;
             let diffY = touchEndY - touchStartY;
 
-            // Seuil de déclenchement à 15px pour une meilleure réactivité
             if (Math.abs(diffX) > Math.abs(diffY)) {
                 if (Math.abs(diffX) > 15) {
                     if (diffX > 0) handleInput("Right");
