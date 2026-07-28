@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SNAKE (iOS Touch Edition)</title>
+    <title>SNAKE (iOS Pure Touch)</title>
     <style>
-        body {
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             background-color: #050505;
             color: #00FF00;
             font-family: 'Courier New', Courier, monospace;
@@ -13,48 +22,46 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            margin: 0;
+            overflow: hidden; /* Empêche le rebond du scroll sur iOS */
             user-select: none;
             -webkit-user-select: none;
-            touch-action: manipulation;
         }
 
         h1 { 
-            margin: 5px 0 15px 0; 
-            letter-spacing: 6px; 
-            text-shadow: 0 0 12px #00FF00; 
-            font-size: 32px;
-        }
-
-        #game-board {
-            border: 4px solid #00FF00;
-            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
-            background-color: #000000;
-            width: 88vw;
-            height: 88vw;
-            max-width: 500px;
-            max-height: 500px;
-            touch-action: none; /* Empêche le défilement de la page Safari pendant les gestes */
+            margin: 0 0 10px 0; 
+            letter-spacing: 4px; 
+            text-shadow: 0 0 10px #00FF00; 
+            font-size: 26px;
         }
 
         .ui-container {
-            width: 88vw;
-            max-width: 500px;
+            width: 85vw;
+            max-width: 400px;
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
             font-weight: bold;
-            font-size: 20px;
-            text-shadow: 0 0 8px #00FF00;
+            font-size: 18px;
+            text-shadow: 0 0 6px #00FF00;
+        }
+
+        #game-board {
+            border: 3px solid #00FF00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            background-color: #000000;
+            width: 85vw;
+            height: 85vw;
+            max-width: 400px;
+            max-height: 400px;
+            touch-action: none;
         }
 
         .instructions {
-            margin-top: 20px;
-            font-size: 14px;
+            margin-top: 15px;
+            font-size: 13px;
             color: #00AA00;
             text-align: center;
-            line-height: 1.6;
+            line-height: 1.4;
         }
     </style>
 </head>
@@ -67,12 +74,12 @@
         <div>RECORD: <span id="high-score">0000</span></div>
     </div>
 
-    <!-- Canvas Ultra HD 1600x1600 -->
+    <!-- Grille 1600x1600 HD -->
     <canvas id="game-board" width="1600" height="1600"></canvas>
 
     <div class="instructions">
-        Glissez votre doigt dans la direction souhaitée<br>
-        Toucher l'écran pour démarrer / rejouer
+        Glissez le doigt pour vous déplacer<br>
+        Touchez l'écran pour rejouer
     </div>
 
     <script>
@@ -105,7 +112,7 @@
             generateFood();
             
             if (gameInterval) clearInterval(gameInterval);
-            gameInterval = setInterval(gameLoop, 90);
+            gameInterval = setInterval(gameLoop, 100);
         }
 
         function gameLoop() {
@@ -154,15 +161,13 @@
             foodY = Math.floor(Math.random() * TILE_COUNT) * GRID_SIZE;
 
             snake.forEach(part => {
-                if (part.x === foodX && part.y === foodY) {
-                    generateFood();
-                }
+                if (part.x === foodX && part.y === foodY) generateFood();
             });
         }
 
         function drawFood() {
             ctx.fillStyle = "#00FF00";
-            ctx.fillRect(foodX + 12, foodY + 12, GRID_SIZE - 24, GRID_SIZE - 24);
+            ctx.fillRect(foodX + 16, foodY + 16, GRID_SIZE - 32, GRID_SIZE - 32);
         }
 
         function checkCollision() {
@@ -222,44 +227,48 @@
             if (dir === "Down" && !goingUp) { dx = 0; dy = GRID_SIZE; changingDirection = true; }
         }
 
-        /* --- CONTRÔLES TACTILES EXCLUSIFS iOS (Swipe) --- */
+        /* --- DETECTEUR DE SWIPE OPTIMISÉ iOS --- */
         let touchStartX = 0;
         let touchStartY = 0;
 
-        document.addEventListener("touchstart", e => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+        window.addEventListener("touchstart", function(e) {
+            touchStartX = e.changedTouches[0].clientX;
+            touchStartY = e.changedTouches[0].clientY;
             
-            // Recommencer directement en touchant l'écran après un Game Over
             if (gameOver) {
                 initGame();
             }
-        }, { passive: true });
+        }, { passive: false });
 
-        document.addEventListener("touchend", e => {
+        window.addEventListener("touchmove", function(e) {
+            // Bloque le défilement de la page pendant le geste
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener("touchend", function(e) {
             if (gameOver) return;
-            
+
             let touchEndX = e.changedTouches[0].clientX;
             let touchEndY = e.changedTouches[0].clientY;
 
             let diffX = touchEndX - touchStartX;
             let diffY = touchEndY - touchStartY;
 
-            // Détection du glissement (seuil minimal de 20px)
+            // Seuil de déclenchement à 15px pour une meilleure réactivité
             if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > 20) {
+                if (Math.abs(diffX) > 15) {
                     if (diffX > 0) handleInput("Right");
                     else handleInput("Left");
                 }
             } else {
-                if (Math.abs(diffY) > 20) {
+                if (Math.abs(diffY) > 15) {
                     if (diffY > 0) handleInput("Down");
                     else handleInput("Up");
                 }
             }
-        }, { passive: true });
+        }, { passive: false });
 
-        // Lancement initial
+        // Lancement direct
         initGame();
     </script>
 </body>
